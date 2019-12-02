@@ -11,13 +11,26 @@ export default async function getAvailabilities(date) {
     });
   }
 
+  const lastDate = moment(date).add(7,"days");
+
   const events = await knex
     .select("kind", "starts_at", "ends_at", "weekly_recurring")
     .from("events")
     .where(function() {
-      this.where("weekly_recurring", true).orWhere("ends_at", ">", +date);
+      this.where("weekly_recurring", true).andWhere(
+        "starts_at",
+        "<",
+        +lastDate.toDate()
+      );
     })
-    .orderBy('kind', 'desc');
+    .orWhere(function() {
+      this.where("starts_at", ">=", +date).andWhere(
+        "ends_at",
+        "<=",
+        +lastDate.toDate()
+      );
+    })
+    .orderBy("kind", "desc");
 
   for (const event of events) {
     for (
