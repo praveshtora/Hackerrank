@@ -4,8 +4,8 @@ import getAvailabilities from "./getAvailabilities";
 describe("getAvailabilities", () => {
   beforeEach(() => knex("events").truncate());
 
-  describe("case 1", () => {
-    it("test 1", async () => {
+  describe("case 1: Check for default number of days", () => {
+    it("should return availibilites for 7 days if number of days not passed", async () => {
       const availabilities = await getAvailabilities(new Date("2014-08-10"));
       expect(availabilities.length).toBe(7);
       for (let i = 0; i < 7; ++i) {
@@ -14,7 +14,7 @@ describe("getAvailabilities", () => {
     });
   });
 
-  describe("case 2", () => {
+  describe("case 2: Check for appointments and openings logic", () => {
     beforeEach(async () => {
       await knex("events").insert([
         {
@@ -31,7 +31,7 @@ describe("getAvailabilities", () => {
       ]);
     });
 
-    it("test 1", async () => {
+    it("should return slots as per logic", async () => {
       const availabilities = await getAvailabilities(new Date("2014-08-10"));
       expect(availabilities.length).toBe(7);
 
@@ -56,7 +56,7 @@ describe("getAvailabilities", () => {
     });
   });
 
-  describe("case 3", () => {
+  describe("case 3: Check for weekly return logic ", () => {
     beforeEach(async () => {
       await knex("events").insert([
         {
@@ -73,7 +73,7 @@ describe("getAvailabilities", () => {
       ]);
     });
 
-    it("test 1", async () => {
+    it("should return slots as per logic", async () => {
       const availabilities = await getAvailabilities(new Date("2014-08-10"));
       expect(availabilities.length).toBe(7);
 
@@ -88,4 +88,20 @@ describe("getAvailabilities", () => {
       expect(availabilities[6].slots).toEqual([]);
     });
   });
+  describe("case 4: returning n number of days availabilty", () => {
+    it("should return n days slot for more than 7", async () => {
+      const availabilities = await getAvailabilities(new Date("2014-08-10"), 10);
+      expect(availabilities.length).toBe(10);
+      for (let i = 0; i < 10; ++i) {
+        expect(availabilities[i].slots).toEqual([]);
+      }
+    });
+    it("should return n days slot for less than 7", async () => {
+      const availabilities = await getAvailabilities(new Date("2014-08-10"), 3);
+      expect(availabilities.length).toBe(3);
+      for (let i = 0; i < 3; ++i) {
+        expect(availabilities[i].slots).toEqual([]);
+      }
+    });
+  })
 });
