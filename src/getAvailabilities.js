@@ -1,17 +1,18 @@
 import moment from "moment";
 import knex from "knexClient";
 
-export default async function getAvailabilities(date) {
-  const availabilities = new Map();
-  for (let i = 0; i < 7; ++i) {
+export default async function getAvailabilities(date, numberOfDays = 7) {
+  const availabilities = {};
+  for (let i = 0; i < numberOfDays; ++i) {
     const tmpDate = moment(date).add(i, "days");
-    availabilities.set(tmpDate.format("d"), {
+    availabilities[i] = {
+      day: tmpDate.format("d"),
       date: tmpDate.toDate(),
       slots: []
-    });
+    };
   }
 
-  const lastDate = moment(date).add(7,"days");
+  const lastDate = moment(date).add(numberOfDays,"days");
 
   const events = await knex
     .select("kind", "starts_at", "ends_at", "weekly_recurring")
@@ -38,16 +39,33 @@ export default async function getAvailabilities(date) {
       date.isBefore(event.ends_at);
       date.add(30, "minutes")
     ) {
-      const day = availabilities.get(date.format("d"));
-      if (event.kind === "opening") {
-        day.slots.push(date.format("H:mm"));
-      } else if (event.kind === "appointment") {
-        day.slots = day.slots.filter(
-          slot => slot.indexOf(date.format("H:mm")) === -1
-        );
+      if (event.weekly_recurring === 1) {
+        const days = Object.values(availabilities).filter((ele) => ele.day === date.format("d"));
+        if (event.kind === "opening") {
+          days.forEach(ele => ele.slots.push(date.format("H:mm")));
+        } else if (event.kind === "appointment") {
+          days.forEach((ele) => {
+            ele.slots = ele.slots.filter(
+              slot => slot.indexOf(date.format("H:mm")) === -1
+            );
+          })
+        }
+      } else {
+        const day = Object.values(availabilities).filter((ele) =>{
+          let dateInMomentOfParticularDay = moment(ele.date);
+          if(dateInMomentOfParticularDay.format("DDMMYYYY") === date.format("DDMMYYYY")) {
+            return true;
+          }
+          return false;
+        });
+          if (event.kind === "opening") {
+            day[0].slots.push(date.format("H:mm"));
+          } else if (event.kind === "appointment") {
+            day[0].slots = day[0].slots.filter((slot) => slot.indexOf(date.format("H:mm")) === -1);
+          }
+        }
       }
     }
-  }
 
-  return Array.from(availabilities.values())
+  return Array.from(Object.values(availabilities));
 }
